@@ -1,11 +1,14 @@
 from tensorflow import keras as keras
 import numpy as np
 from matplotlib import pyplot as plt
+from timeit import default_timer as timer
 
 
 def main():
     # Вывести номер версии Keras API.
     print("Keras version:", keras.__version__)
+
+    epochs = 500
 
     # Описать модель. Персептрон является одним нейроном поэтому слой в модели тоже всего один. На вход подаём
     # двухмерную точку поэтому input_dim равен 2.
@@ -27,7 +30,9 @@ def main():
     c = [1., 0., 1., 1., 0., 1.]
 
     # Обучить модель.
-    hist = model.fit(xy, c, batch_size=1, epochs=500)
+    time_start = timer()
+    hist = model.fit(xy, c, batch_size=1, epochs=epochs)
+    time_end = timer()
 
     # Получить веса и смещение после обучения которые потребуются для рисования дискриминанты.
     weights = model.layers[0].get_weights()
@@ -48,6 +53,12 @@ def main():
     # другой к другому. Это позволит в частности каждому набору точек придать собственное цветовое значение.
     xy1 = [xy[i] for i in range(6) if c[i] > 0.5]
     xy2 = [xy[i] for i in range(6) if c[i] < 0.5]
+
+    # Вывести краткую статистику обучения.
+    print('Время обучения:', int(time_end - time_start), 'с.',
+          'Количество эпох:', epochs,
+          'Функция потерь MSE:', min(hist.history['loss']),
+          'Метрика качества MAE:', min(hist.history['mae']))
 
     # todo: здесь стоит обратить внимание на использование *
     plt.plot(*zip(*xy1), 'ro')
