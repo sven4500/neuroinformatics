@@ -5,9 +5,15 @@ from matplotlib import pyplot as plt
 from timeit import default_timer as timer
 
 
+# Задать гиперпараметры обучения. В качестве размера пакета берём 10% от количества данных для обучения.
+batch_size = 10
+epochs = 2500
+
+
 # Целевая функция, которую модель обучается предсказывать.
 def fun(t):
-    return np.cos(2.5 * t ** 2 - 5 * t)
+    # return np.cos(2.5 * t ** 2 - 5 * t)
+    return np.sin(np.sin(t) * t ** 2)
     # return np.cos(-3 * t ** 2 + 5 * t + 10)
 
 
@@ -39,12 +45,8 @@ def main():
 
     # Создать данные для обучения. Стоит обратить внимание на количество исходных точек - их мало. Предполагается, что
     # обученная модель сможет предсказывать промежуточные значения, которых нет в наборе для обучения.
-    t1 = np.linspace(0, 3.4, 50)
+    t1 = np.linspace(0, 3.4, 150)
     y1 = fun(t1)
-
-    # Задать гиперпараметры обучения. В качестве размера пакета берём 10% от количества данных для обучения.
-    batch_size = 5
-    epochs = 5000
 
     # Обучить модель.
     time_start = timer()
@@ -64,18 +66,24 @@ def main():
 
     # Вывести графики.
     fig, axes = plt.subplots(2, 2)
-    axes[0, 0].set_title('Данные для обучения')
-    axes[0, 0].plot(t1, y1)
-    # axes[0, 0].plot(t2, y2)
-    axes[0, 1].set_title('Истинные и предсказанные данные')
-    axes[0, 1].plot(t2, gt)
-    axes[0, 1].plot(t2, y2, '--')
-    axes[1, 0].set_title('Функция потерь')
-    axes[1, 0].set_ylabel('MSE')
-    axes[1, 0].plot(hist.history['loss'])
-    axes[1, 1].set_title('Метрика качества')
-    axes[1, 1].set_ylabel('MAE')
-    axes[1, 1].plot(hist.history['mae'])
+    fig.tight_layout()
+
+    axes[0, 0].set_title('Функция потерь')
+    axes[0, 0].set_ylabel('MSE')
+    axes[0, 0].plot(hist.history['loss'])
+
+    axes[0, 1].set_title('Метрика качества')
+    axes[0, 1].set_ylabel('MAE')
+    axes[0, 1].plot(hist.history['mae'])
+
+    axes[1, 0].set_title('Данные для обучения')
+    axes[1, 0].plot(t1, y1, '.')
+    # axes[1, 0].plot(t2, y2)
+
+    axes[1, 1].set_title('Истинные и предсказанные данные')
+    axes[1, 1].plot(t2, gt)
+    axes[1, 1].plot(t2, y2, '--')
+
     plt.show()
 
 
