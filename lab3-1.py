@@ -5,6 +5,10 @@ from matplotlib import pyplot as plt
 from timeit import default_timer as timer
 
 
+# Гиперпараметры.
+epochs = 1000
+
+
 # Уравнение эллипса в параметрическом виде.
 def ellipse(t, a, b, x0, y0):
     x = x0 + a * np.cos(t)
@@ -79,29 +83,54 @@ def main():
     # Скомпилировать модель.
     model.compile(loss='mse', optimizer='adam', metrics=['mae'])
 
-    # Задать гиперпараметры.
-    epochs = 2500
     batch_size = int(len(train_data) * 0.1)
 
     # Обучить модель.
-    # time_start = timer()
+    time_start = timer()
     hist = model.fit(train_input, train_output, batch_size=batch_size, epochs=epochs)
-    # time_end = timer()
+    time_end = timer()
 
     x = np.linspace(-1, 1, 200)
-    y = np.linspace(-1, 1, 250)
+    y = np.linspace(-1, 1, 200)
     xy = [[a, b] for a in x for b in y]
 
     z = model.predict(xy)
-    z = z.reshape((200, 250, 3))
+    z = z.reshape((200, 200, 3))
 
-    #plt.pcolormesh(X, Y, Z) #, cmap=cm.gray)
-    plt.imshow(z)
-    plt.show()
+    # Вывести краткую статистику обучения.
+    print('Время обучения:', int(time_end - time_start), 'с.',
+          'Количество эпох:', epochs,
+          'Функция потерь MSE:', min(hist.history['loss']),
+          'Метрика качества MAE:', min(hist.history['mae']))
 
-    plt.plot(x1, y1)
-    plt.plot(x2, y2)
-    plt.plot(x3, y3)
+    fig, axes = plt.subplots(2, 2)
+    fig.tight_layout()
+
+    axes[0, 0].set_title('Функция потерь')
+    axes[0, 0].set_xlabel('Эпоха')
+    axes[0, 0].set_ylabel('MSE')
+    axes[0, 0].plot(hist.history['loss'])
+
+    axes[0, 1].set_title('Метрика качества')
+    axes[0, 1].set_xlabel('Эпоха')
+    axes[0, 1].set_ylabel('MAE')
+    axes[0, 1].plot(hist.history['mae'])
+
+    axes[1, 0].plot(x1, y1)
+    axes[1, 0].plot(x2, y2)
+    axes[1, 0].plot(x3, y3)
+    axes[1, 0].set_aspect(1)
+
+    axes[1, 1].set_title('Скалярное поле')
+    axes[1, 1].set_xlabel('x')
+    axes[1, 1].set_ylabel('y')
+    axes[1, 1].get_xaxis().set_ticks([])
+    axes[1, 1].get_yaxis().set_ticks([])
+    # axes[1].pcolormesh(X, Y, Z) #, cmap=cm.gray)
+    axes[1, 1].imshow(z)
+    # axes[1, 1].invert_xaxis()
+    axes[1, 1].invert_yaxis()
+
     plt.show()
 
 
