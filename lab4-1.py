@@ -3,24 +3,34 @@ import numpy as np
 from matplotlib import pyplot as plt
 from timeit import default_timer as timer
 from keras.layers import Layer
+from keras import backend as back  # expand_dims, exp
 
 
 class RBFLayer(Layer):
-    def __init__(self, output_dim, sigma=0.5, **kwargs):
+    def __init__(self, output_dim, **kwargs):
         self.output_dim = output_dim
-        self.sigma = sigma
         super(RBFLayer, self).__init__(**kwargs)
 
     def build(self, input_shape):
         # todo: keras рекомендует инициализировать веса в методе call, почему?
-        self.bias = self.add_weight(name='bias',
-                                    shape=(self.output_dim, input_shape[1]),
-                                    initializer='uniform',
-                                    trainable=True)
+        self.mu = self.add_weight(name='mu',
+                                  # shape=(input_shape[1], self.output_dim),
+                                  shape=(input_shape[1], self.output_dim),
+                                  initializer='uniform',
+                                  trainable=True)
+        self.sigma = self.add_weight(name='sigma',
+                                     shape=(self.output_dim,),
+                                     initializer='uniform',
+                                     trainable=True)
         super(RBFLayer, self).build(input_shape)
 
     def call(self, inputs):
-        return inputs - self.bias
+        diff = back.expand_dims(inputs) - self.mu
+        output = back.exp(back.sum(diff ** 2, axis=1) * self.sigma)
+        return output
+
+    # def compute_output_shape(self, input_shape):
+        # return (self.output_dim, input_shape[0])
 
 
 # Уравнение эллипса в параметрическом виде.
@@ -49,15 +59,15 @@ def main():
     print("Keras version:", keras.__version__)
 
     # Гиперпараметры.
-    epochs = 10
+    epochs = 500
 
-    # Описать модель. Первый слой RBF, второй линейный.
-    # todo: обратить внимание на инициализацию, можно словами вместо чисел
+    # Описать модель. Первый слой RBF, второй линейный. Инициализацию весов можно задать словами вместо чисел. По канону
+    # выходной слой должен быть линейным. Здесь используем сигмоиду чтобы остаться в диапазоне [0...1].
     model = keras.models.Sequential()
-    model.add(RBFLayer(10, input_dim=2, sigma=0.1))
-    model.add(keras.layers.Dense(3, activation='linear',
-                                 kernel_initializer='random_normal',  # нормальное распределение
-                                 bias_initializer='uniform'))  # равномерное распределение
+    model.add(RBFLayer(10, input_dim=2))
+    model.add(keras.layers.Dense(3, activation='sigmoid',  # linear по канону
+                                 kernel_initializer='random_normal',  # нормальное распределение (mean=0.0, stddev=0.05)
+                                 bias_initializer='uniform'))  # равномерное распределение (minval=-0.05, maxval=0.05)
 
     # Вывести в консоль информацию о модели.
     model.summary()
@@ -103,12 +113,55 @@ def main():
     train_output = [x[1] for x in train_data]
 
     # Задать размер пакета как 10% от размера набора для обучения.
-    batch_size = 1  # int(len(train_data) * 0.1)
+    batch_size = int(len(train_data) * 0.1)
 
     # Обучить модель.
     time_start = timer()
     hist = model.fit(train_input, train_output, batch_size=batch_size, epochs=epochs)
     time_end = timer()
+
+    # Вывести краткую статистику обучения.
+    print('Время обучения:', int(time_end - time_start), 'с.',
+          'Количество эпох:', epochs,
+          'Функция потерь MSE:', min(hist.history['loss']),
+          'Метрика качества MAE:', min(hist.history['mae']))
+
+    x = np.linspace(-1, 1, 200)
+    y = np.linspace(-1, 1, 200)
+    xy = [[a, b] for a in x for b in y]
+
+    z = model.predict(xy)
+    z = z.reshape((200, 200, 3))
+
+    fig, axes = plt.subplots(2, 2)
+    fig.tight_layout()
+
+    axes[0, 0].set_title('Функция потерь')
+    axes[0, 0].set_xlabel('Эпоха')
+    axes[0, 0].set_ylabel('MSE')
+    axes[0, 0].plot(hist.history['loss'])
+
+    axes[0, 1].set_title('Метрика качества')
+    axes[0, 1].set_xlabel('Эпоха')
+    axes[0, 1].set_ylabel('MAE')
+    axes[0, 1].plot(hist.history['mae'])
+
+    axes[1, 0].plot(x1, y1)
+    axes[1, 0].plot(x2, y2)
+    axes[1, 0].plot(x3, y3)
+    axes[1, 0].set_aspect(1)
+
+    axes[1, 1].set_title('Скалярное поле')
+    axes[1, 1].set_xlabel('x')
+    axes[1, 1].set_ylabel('y')
+    axes[1, 1].get_xaxis().set_ticks([])
+    axes[1, 1].get_yaxis().set_ticks([])
+    # axes[1].pcolormesh(X, Y, Z) #, cmap=cm.gray)
+    axes[1, 1].imshow(z)
+    # axes[1, 1].invert_xaxis()
+    axes[1, 1].invert_yaxis()
+
+    plt.show()
 
 
 if __name__ == '__main__':
