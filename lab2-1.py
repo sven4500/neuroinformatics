@@ -6,7 +6,7 @@ from timeit import default_timer as timer
 
 epochs = 50
 D = 5
-is_recurrent = False
+has_recurrent_input = False
 
 
 def signal(t):
@@ -19,6 +19,7 @@ def main():
 
     # Описать модель. Моделируем модель ADALINE (adaptive linear neuron). По сути модель представляет персептрон за
     # исключением функции активации: здесь она линейная.
+    # todo: важно отметить что ADALINE содержит тождественно линейную активационную функцию
     model = keras.models.Sequential()
     model.add(keras.layers.Dense(1, input_dim=D, activation='linear',
                                  kernel_initializer=keras.initializers.RandomNormal(stddev=0.5,mean=0.0),
@@ -28,6 +29,7 @@ def main():
     model.summary()
 
     # Скомпилировать модель.
+    # todo: важно отметить связь с SGD
     # optimizer = keras.optimizers.Adam(learning_rate=0.01)
     optimizer = keras.optimizers.SGD(learning_rate=0.01)
     model.compile(loss='mse', optimizer=optimizer, metrics=['mae'])
@@ -54,10 +56,15 @@ def main():
     errors = []
 
     # Предсказать последовательность.
-    for i in range(0, len(predict_gt)):
-        predict = model.predict([yp[-D:]]).item() if is_recurrent else model.predict([sequence[i]]).item()
-        yp += [predict]
-        errors += [predict - predict_gt[i]]
+    if has_recurrent_input:
+        for i in range(0, len(predict_gt)):
+            predict = model.predict([yp[-D:]]).item()
+            yp += [predict]
+            errors += [predict - predict_gt[i]]
+    else:
+        predict = model.predict(sequence).flatten().tolist()  # predict возвращает список списков поэтому делаем flatten
+        yp = yp + predict
+        errors = [i - j for i, j in zip(predict, predict_gt)]
 
     # Вывести краткую статистику обучения.
     print('Время обучения:', int(time_end - time_start), 'с.',
@@ -82,7 +89,7 @@ def main():
 
     axes[1, 0].set_xlabel('t')
     axes[1, 0].set_ylabel('y')
-    axes[1, 0].plot(t, y)
+    axes[1, 0].plot(t, y, '.')
     axes[1, 0].plot(t, yp)
 
     axes[1, 1].set_title('Ошибка предсказания')
