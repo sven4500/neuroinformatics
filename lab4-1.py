@@ -6,6 +6,9 @@ from keras.layers import Layer
 from keras import backend as back  # expand_dims, exp
 
 
+mu = []  # центры
+
+
 class RBFLayer(Layer):
     def __init__(self, output_dim, **kwargs):
         self.output_dim = output_dim
@@ -25,8 +28,10 @@ class RBFLayer(Layer):
         super(RBFLayer, self).build(input_shape)
 
     def call(self, inputs):
+        global mu
         diff = back.expand_dims(inputs) - self.mu
         output = back.exp(back.sum(diff ** 2, axis=1) * self.sigma)
+        mu = back.eval(self.mu)
         return output
 
     # def compute_output_shape(self, input_shape):
@@ -149,6 +154,7 @@ def main():
     axes[1, 0].plot(x1, y1)
     axes[1, 0].plot(x2, y2)
     axes[1, 0].plot(x3, y3)
+    axes[1, 0].plot(mu[0], mu[1], '*')
     axes[1, 0].set_aspect(1)
 
     axes[1, 1].set_title('Скалярное поле')
