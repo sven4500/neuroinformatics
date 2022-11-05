@@ -12,22 +12,21 @@ from tqdm import tqdm
 class ElmanLayer(nn.Module):
     def __init__(self, in_features, out_features):
         super(ElmanLayer, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
         self.w1 = torch.nn.Parameter(torch.randn(in_features, out_features))
         self.w2 = torch.nn.Parameter(torch.randn(out_features, out_features))
-        self.bias = torch.nn.Parameter(torch.randn(out_features))
+        self.b = torch.nn.Parameter(torch.randn(out_features))
+        self.prev = torch.tensor(torch.zeros(in_features, out_features))
 
     def clear_memory(self):
-        if hasattr(self, 'prev'):
-            delattr(self, 'prev')
+        self.prev = torch.tensor(torch.zeros(self.in_features, self.out_features))
 
     def forward(self, input):
+        d = torch.matmul(self.prev, self.w2)
         out = torch.matmul(input, self.w1)
-        if hasattr(self, 'prev'):
-            d = torch.matmul(self.prev, self.w2)
-            out = torch.add(out, self.bias)
-            out = torch.add(out, d)
-        else:
-            out = torch.add(out, self.bias)
+        out = torch.add(out, d)
+        out = torch.add(out, self.b)
         out = torch.tanh(out)
         self.prev = torch.tensor(out)
         return out
@@ -61,7 +60,7 @@ def main():
 
     # Гиперпараметры.
     epochs = 100
-    window = 5
+    window = 10
 
     # Задать новое зерно.
     seed = time.time()
