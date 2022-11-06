@@ -43,18 +43,19 @@ def load_image(path, width=320, height=240):
 
 def load_train_data(width=320, height=240):
     output = []
-    for i in range(1, 4):
-        output += [(load_image('./images/{0}.jpg'.format(i), width, height),
-                    load_image('./images/{0}.jpg'.format(i), width, height))]
+    output += [(load_image('./images/1.png', width, height),
+                load_image('./images/1.png', width, height))]
+    output += [(load_image('./images/2.png', width, height),
+                load_image('./images/2.png', width, height))]
+    output += [(load_image('./images/6.png', width, height),
+                load_image('./images/6.png', width, height))]
     return output
 
 
 def update_fig(*args):
     global im_axes
-    if update_fig.counter >= len(frames):
-        update_fig.counter = 0
     im_axes.set_array(frames[update_fig.counter])
-    update_fig.counter += 1
+    update_fig.counter = (update_fig.counter + 1) % len(frames)
     return im_axes,
 
 
@@ -68,8 +69,8 @@ def main():
     print('PyTorch version:', torch.__version__)
 
     # Гиперпараметры.
-    epochs = 50
-    width, height = 64, 64
+    epochs = 1500
+    width, height = 10, 12
 
     # Задать новое зерно.
     seed = time.time()
@@ -83,7 +84,6 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     # optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
-    # train_data = [(load_image('input_image.jpg', width, height), load_image('input_image.jpg', width, height))]
     train_data = load_train_data(width, height)
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=1, shuffle=True)
 
@@ -97,23 +97,20 @@ def main():
     time_start = timer()
 
     for i in range(epochs):
-        # create tqdm object to add arbitrary text
+        # Создать объект tqdm для вывода дополнительного текста.
         pbar = tqdm(enumerate(train_loader))
 
         for j, (input, output_gt) in pbar:
-
             model.set_init_value(input)
 
-            #
             output = model()
 
-            #
             # crit = nn.L1Loss()
             crit = nn.MSELoss()
             loss = crit(output_gt, output)
             train_loss += [loss.item()]
 
-            # propagate error
+            # Обновить веса.
             optimizer.zero_grad()
             loss.backward()  # retain_graph=True
             optimizer.step()
@@ -128,10 +125,10 @@ def main():
     global im_axes, frames
 
     # Задать ожидаемое и зашумлённое входные значения.
-    output_gt = train_data[2][0]
+    output_gt = train_data[0][0]
     initial = np.copy(output_gt)
     # initial += np.random.normal(0, 0.15, initial.shape)
-    initial = (initial + 1) / 2
+    initial[0:len(initial)//2] = 0
 
     model.set_init_value(initial)
 
@@ -171,7 +168,7 @@ def main():
     axes[1, 1].set_aspect(1)
     im_axes = axes[1, 1].imshow(frames[0], animated=True)
 
-    anim = animation.FuncAnimation(fig, update_fig, interval=50, blit=True)
+    anim = animation.FuncAnimation(fig, update_fig, interval=250, blit=True)
     plt.show()
 
 
