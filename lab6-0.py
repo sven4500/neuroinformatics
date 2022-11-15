@@ -29,31 +29,23 @@ class SOM():
 def generate_train_data(num_samples):
     # train_data = np.random.rand(num_samples, 3)
     train_data = []
-    train_data += [[0.5, 0.7]]
-    train_data += [[0.7, -0.4]]
-    train_data += [[0.4, -1.]]
-    train_data += [[0.6, -1.5]]
-    train_data += [[-0.7, -1.4]]
-    train_data += [[-1.3, 0.9]]
-    train_data += [[0.5, -0.6]]
-    train_data += [[1.3, -1.4]]
-    train_data += [[-0.2, -0.4]]
-    train_data += [[0.7, 0.8]]
-    train_data += [[-1, -0.1]]
-    train_data += [[-0.2, 0.4]]
+    train_data += [[1., 0., 0.]]  # красный
+    train_data += [[1., 0.5, 0.]]  # оранж
+    train_data += [[0., 1., 0.]]  # синий
+    train_data += [[0., 0., 1.]]  # зелёный
     return train_data
 
 
 def main():
     num_epochs = 200
-    num_samples = 25
+    num_samples = 10
 
     width, height = 64, 48
 
     radius = start_radius = max(width, height) // 2
     lr = start_lr = 1
 
-    model = SOM(in_features=2, width=width, height=height)
+    model = SOM(in_features=3, width=width, height=height)
 
     train_data = generate_train_data(num_samples)
     # train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=1, shuffle=True)
@@ -74,8 +66,6 @@ def main():
 
         # pbar.set_description('radius: %f, lr: %f' % (radius, lr))
 
-    image_to_show = np.dot(model.nodes[..., :2], [0.5, 0.5]).astype(np.float32).reshape((height, width, 1))
-
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
@@ -85,7 +75,7 @@ def main():
 
     # axes[1, 0].set_title('')
     # axes[1, 0].set_aspect(1)
-    axes[1, 0].imshow(image_to_show, cmap='gray')
+    axes[1, 0].imshow(model.nodes.reshape((height, width, 3)))
 
     plt.show()
 
