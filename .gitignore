@@ -31,3 +31,4 @@ _ReSharper*/
 packages/
 #Ignore files built by PyCharm
 .idea/
+cifar-10-batches-py/
