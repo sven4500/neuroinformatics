@@ -5,6 +5,10 @@ import torch.optim as optim
 from timeit import default_timer as timer
 from matplotlib import pyplot as plt
 from tqdm import tqdm
+from matplotlib.widgets import Slider, Button
+
+
+core_data = None
 
 
 # https://www.cs.toronto.edu/~kriz/cifar.html
@@ -40,11 +44,23 @@ def plain_to_image(image, width=32, height=32):
     return image
 
 
+def on_slider_update(axes, decoder, feature, val):
+    global core_data
+    core_data[feature] = val
+    image = decoder(torch.from_numpy(core_data)).detach().numpy()
+    image = plain_to_image(image)
+    axes.set_array(image)
+
+
+def on_button_click():
+    return
+
+
 def main():
     epochs = 10
     width, height = 32, 32  # соответствует размеру изображений CIFAR-10
     dim_1 = width * height * 3  # 3 цветовых компоненты
-    dim_2, dim_3 = dim_1*2, dim_1//48
+    dim_2, dim_3 = int(dim_1 * 2.0), int(dim_1 / 60.0)
 
     encoder = nn.Sequential(
         nn.Linear(in_features=dim_1, out_features=dim_2),
@@ -61,8 +77,8 @@ def main():
     )
 
     # Задать оптимизатор.
-    optimizer_enc = optim.Adam(encoder.parameters(), lr=1e-4)
-    optimizer_dec = optim.Adam(decoder.parameters(), lr=1e-4)
+    optimizer_enc = optim.Adam(encoder.parameters(), lr=1e-5)
+    optimizer_dec = optim.Adam(decoder.parameters(), lr=1e-5)
 
     print('dim_1: %d, dim_2: %d, dim_3: %d' % (dim_1, dim_2, dim_3))
 
@@ -72,7 +88,7 @@ def main():
     # train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=3)
     np.random.shuffle(train_data)
 
-    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=10, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=20, shuffle=True)
 
     # Перевести модель в состояние обучения.
     encoder.train()
@@ -106,7 +122,7 @@ def main():
             optimizer_dec.step()
 
             # Показать ошибку.
-            pbar.set_description('%d. loss: %f' % (i, train_loss[-1]))
+            pbar.set_description('%d. loss: %f' % (i + 1, train_loss[-1]))
 
     time_end = timer()
 
@@ -119,15 +135,12 @@ def main():
     encoder.eval()
     decoder.eval()
 
-    # input_test = np.random.uniform(size=dim_3, low=-1.0, high=1.0).astype(np.float32)
-    # output_test = decoder(torch.from_numpy(input_test)).detach().numpy()
-
     input_test = train_data[0][0]
     output_core = encoder(torch.from_numpy(input_test)).detach().numpy()
     output_test = decoder(torch.from_numpy(output_core)).detach().numpy()
 
-    # output_core[0] = 0
-    # output_test = decoder(torch.from_numpy(output_core)).detach().numpy()
+    global core_data
+    core_data = np.copy(output_core)
 
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
@@ -137,12 +150,34 @@ def main():
     axes[0, 0].set_ylabel('MSE')
     axes[0, 0].plot(train_loss)
 
+    axes[0, 1].set_title('Вход')
     axes[0, 1].set_aspect(1)
     axes[0, 1].imshow(plain_to_image(input_test))
 
+    axes[1, 0].set_title('Выход с мод. ядром')
     axes[1, 0].set_aspect(1)
-    axes[1, 0].imshow(plain_to_image(output_test))
+    im_axes = axes[1, 0].imshow(plain_to_image(output_test))
 
+    axes[1, 1].set_title('Выход')
+    axes[1, 1].set_aspect(1)
+    axes[1, 1].imshow(plain_to_image(output_test))
+
+    features = np.random.randint(low=0, high=dim_3, size=3)
+
+    # Добавить три полосы прокрутки для модификации трёх случайных компонент ядра.
+    axs_1 = fig.add_axes([0.85, 0.25, 0.0225, 0.65])
+    slid_1 = Slider(ax=axs_1, label='#1', valinit=core_data[features[0]], valmin=-1.0, valmax=1.0, orientation='vertical')
+    slid_1.on_changed(lambda val : on_slider_update(im_axes, decoder, features[0], val))
+
+    axs_2 = fig.add_axes([0.9, 0.25, 0.0225, 0.65])
+    slid_2 = Slider(ax=axs_2, label='#2', valinit=core_data[features[1]], valmin=-1.0, valmax=1.0, orientation='vertical')
+    slid_2.on_changed(lambda val : on_slider_update(im_axes, decoder, features[1], val))
+
+    axs_3 = fig.add_axes([0.95, 0.25, 0.0225, 0.65])
+    slid_3 = Slider(ax=axs_3, label='#3', valinit=core_data[features[2]], valmin=-1.0, valmax=1.0, orientation='vertical')
+    slid_3.on_changed(lambda val : on_slider_update(im_axes, decoder, features[2], val))
+
+    plt.subplots_adjust(right=0.8)  # освободить немного места на графике под элементы управления
     plt.show()
 
 
