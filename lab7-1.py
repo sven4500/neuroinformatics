@@ -33,30 +33,44 @@ def load_train_data(path, requested_label):
     return dataset
 
 
+def plain_to_image(image, width=32, height=32):
+    image = (image + 1) / 2  # нормировать в диапазон [0..1]
+    image = np.reshape(image, (3, height, width))  # придать форму
+    image = np.transpose(image, [1, 2, 0])  # переместить размерности на свои места
+    return image
+
+
 def main():
     epochs = 10
     width, height = 32, 32  # соответствует размеру изображений CIFAR-10
     dim_1 = width * height * 3  # 3 цветовых компоненты
-    dim_2, dim_3 = dim_1//2, dim_1//3
+    dim_2, dim_3 = dim_1*2, dim_1//48
 
     encoder = nn.Sequential(
         nn.Linear(in_features=dim_1, out_features=dim_2),
+        # nn.Tanh(),
         nn.Linear(in_features=dim_2, out_features=dim_3),
+        nn.Tanh(),
     )
 
     decoder = nn.Sequential(
         nn.Linear(in_features=dim_3, out_features=dim_2),
+        # nn.Tanh(),
         nn.Linear(in_features=dim_2, out_features=dim_1),
+        nn.Tanh(),
     )
 
     # Задать оптимизатор.
-    optimizer_enc = optim.Adam(encoder.parameters(), lr=1e-3)
-    optimizer_dec = optim.Adam(decoder.parameters(), lr=1e-3)
+    optimizer_enc = optim.Adam(encoder.parameters(), lr=1e-4)
+    optimizer_dec = optim.Adam(decoder.parameters(), lr=1e-4)
+
+    print('dim_1: %d, dim_2: %d, dim_3: %d' % (dim_1, dim_2, dim_3))
 
     train_data = []
-    # train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=1)
-    train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=2)
+    train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=1)
+    # train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=2)
     # train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=3)
+    np.random.shuffle(train_data)
 
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=10, shuffle=True)
 
@@ -85,12 +99,14 @@ def main():
             # Обновить весовые коэффициенты.
             optimizer_enc.zero_grad()
             optimizer_dec.zero_grad()
+
             loss.backward()
+
             optimizer_enc.step()
             optimizer_dec.step()
 
             # Показать ошибку.
-            pbar.set_description('loss: %f' % (train_loss[-1]))
+            pbar.set_description('%d. loss: %f' % (i, train_loss[-1]))
 
     time_end = timer()
 
@@ -106,13 +122,12 @@ def main():
     # input_test = np.random.uniform(size=dim_3, low=-1.0, high=1.0).astype(np.float32)
     # output_test = decoder(torch.from_numpy(input_test)).detach().numpy()
 
-    core_test = encoder(torch.from_numpy(train_data[0][0])).detach().numpy()
-    # core_test[0] = 0
-    output_test = decoder(torch.from_numpy(core_test)).detach().numpy()
+    input_test = train_data[0][0]
+    output_core = encoder(torch.from_numpy(input_test)).detach().numpy()
+    output_test = decoder(torch.from_numpy(output_core)).detach().numpy()
 
-    output_test = (output_test + 1) / 2
-    output_test = np.reshape(output_test, (3, height, width))
-    output_test = np.transpose(output_test, [1, 2, 0])
+    # output_core[0] = 0
+    # output_test = decoder(torch.from_numpy(output_core)).detach().numpy()
 
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
@@ -122,8 +137,11 @@ def main():
     axes[0, 0].set_ylabel('MSE')
     axes[0, 0].plot(train_loss)
 
+    axes[0, 1].set_aspect(1)
+    axes[0, 1].imshow(plain_to_image(input_test))
+
     axes[1, 0].set_aspect(1)
-    axes[1, 0].imshow(output_test)
+    axes[1, 0].imshow(plain_to_image(output_test))
 
     plt.show()
 
