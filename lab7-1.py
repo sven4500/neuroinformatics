@@ -52,15 +52,23 @@ def on_slider_update(axes, decoder, feature, val):
     axes.set_array(image)
 
 
-def on_button_click():
-    return
+def on_button_click(axes_gt, axes_out, axes_mod, encoder, decoder, data):
+    global core_data
+    image = data[np.random.randint(low=0, high=len(data))][0]
+    enc_out = encoder(torch.from_numpy(image)).detach().numpy()
+    dec_out = decoder(torch.from_numpy(enc_out)).detach().numpy()
+    core_data = np.copy(enc_out)
+    axes_gt.set_array(plain_to_image(image))
+    axes_out.set_array(plain_to_image(dec_out))
+    axes_mod.set_array(plain_to_image(dec_out))
+    plt.draw()
 
 
 def main():
-    epochs = 10
+    epochs = 50
     width, height = 32, 32  # соответствует размеру изображений CIFAR-10
     dim_1 = width * height * 3  # 3 цветовых компоненты
-    dim_2, dim_3 = int(dim_1 * 2.0), int(dim_1 / 60.0)
+    dim_2, dim_3 = int(dim_1 * 1.5), int(dim_1 / 32.0)
 
     encoder = nn.Sequential(
         nn.Linear(in_features=dim_1, out_features=dim_2),
@@ -80,15 +88,18 @@ def main():
     optimizer_enc = optim.Adam(encoder.parameters(), lr=1e-5)
     optimizer_dec = optim.Adam(decoder.parameters(), lr=1e-5)
 
-    print('dim_1: %d, dim_2: %d, dim_3: %d' % (dim_1, dim_2, dim_3))
-
+    # Классы имеют следующие идентификаторы: 0 - самолёты, 1 - машины, 2 - птицы, 3 - кошки, 4 - олени, 5 - собаки,
+    # 6 - лягушки, 7 - лошади, 8 - корабли, 9 - грузовики
     train_data = []
-    train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=1)
+    train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=0)
     # train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=2)
     # train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=3)
     np.random.shuffle(train_data)
 
-    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=20, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=32, shuffle=True)
+
+    # Вывести краткую статистику по модели и данным для обучения.
+    print('dim_1: %d, dim_2: %d, dim_3: %d, samples: %d' % (dim_1, dim_2, dim_3, len(train_data)))
 
     # Перевести модель в состояние обучения.
     encoder.train()
@@ -135,13 +146,6 @@ def main():
     encoder.eval()
     decoder.eval()
 
-    input_test = train_data[0][0]
-    output_core = encoder(torch.from_numpy(input_test)).detach().numpy()
-    output_test = decoder(torch.from_numpy(output_core)).detach().numpy()
-
-    global core_data
-    core_data = np.copy(output_core)
-
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
@@ -152,30 +156,35 @@ def main():
 
     axes[0, 1].set_title('Вход')
     axes[0, 1].set_aspect(1)
-    axes[0, 1].imshow(plain_to_image(input_test))
+    ax_gt = axes[0, 1].imshow([[0]])
 
-    axes[1, 0].set_title('Выход с мод. ядром')
+    axes[1, 0].set_title('Мод. выход')
     axes[1, 0].set_aspect(1)
-    im_axes = axes[1, 0].imshow(plain_to_image(output_test))
+    ax_mod = axes[1, 0].imshow([[0]])
 
     axes[1, 1].set_title('Выход')
     axes[1, 1].set_aspect(1)
-    axes[1, 1].imshow(plain_to_image(output_test))
+    ax_out = axes[1, 1].imshow([[0]])
 
     features = np.random.randint(low=0, high=dim_3, size=3)
 
     # Добавить три полосы прокрутки для модификации трёх случайных компонент ядра.
     axs_1 = fig.add_axes([0.85, 0.25, 0.0225, 0.65])
-    slid_1 = Slider(ax=axs_1, label='#1', valinit=core_data[features[0]], valmin=-1.0, valmax=1.0, orientation='vertical')
-    slid_1.on_changed(lambda val : on_slider_update(im_axes, decoder, features[0], val))
+    slid_1 = Slider(ax=axs_1, label='#1', valinit=0, valmin=-1.0, valmax=1.0, orientation='vertical')
+    slid_1.on_changed(lambda val : on_slider_update(ax_mod, decoder, features[0], val))
 
     axs_2 = fig.add_axes([0.9, 0.25, 0.0225, 0.65])
-    slid_2 = Slider(ax=axs_2, label='#2', valinit=core_data[features[1]], valmin=-1.0, valmax=1.0, orientation='vertical')
-    slid_2.on_changed(lambda val : on_slider_update(im_axes, decoder, features[1], val))
+    slid_2 = Slider(ax=axs_2, label='#2', valinit=0, valmin=-1.0, valmax=1.0, orientation='vertical')
+    slid_2.on_changed(lambda val : on_slider_update(ax_mod, decoder, features[1], val))
 
     axs_3 = fig.add_axes([0.95, 0.25, 0.0225, 0.65])
-    slid_3 = Slider(ax=axs_3, label='#3', valinit=core_data[features[2]], valmin=-1.0, valmax=1.0, orientation='vertical')
-    slid_3.on_changed(lambda val : on_slider_update(im_axes, decoder, features[2], val))
+    slid_3 = Slider(ax=axs_3, label='#3', valinit=0, valmin=-1.0, valmax=1.0, orientation='vertical')
+    slid_3.on_changed(lambda val : on_slider_update(ax_mod, decoder, features[2], val))
+
+    axs_4 = fig.add_axes([0.8625, 0.1, 0.1, 0.075])
+    btn = Button(axs_4, 'Случ.')
+    btn.on_clicked(lambda event : on_button_click(ax_gt, ax_out, ax_mod, encoder, decoder, train_data))
+    on_button_click(ax_gt, ax_out, ax_mod, encoder, decoder, train_data)
 
     plt.subplots_adjust(right=0.8)  # освободить немного места на графике под элементы управления
     plt.show()
