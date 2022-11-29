@@ -4,7 +4,7 @@ import matplotlib.animation as animation
 from tqdm import tqdm
 
 
-# SOM (self organised map) - карта Кохонена
+# SOM (self organised map) - карта Кохонена.
 class SOM():
     def __init__(self, in_features, width, height):
         self.nodes = np.random.randn(width*height, in_features)
@@ -62,13 +62,14 @@ def main():
     radius = start_radius = max(width, height) // 2
     lr = start_lr = 1
 
+    # Создать объект модели.
     model = SOM(in_features=3, width=width, height=height)
 
     train_data = generate_train_data(num_samples)
-    # train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=1, shuffle=True)
 
     global frames, im_axes
-    bmu_error = []
+    learn_radius = []
+    learn_lr = []
 
     for i in range(1, num_epochs):
         np.random.shuffle(train_data)
@@ -78,9 +79,12 @@ def main():
 
         for j, input in pbar:
             # Обновить карту.
-            bmu_error += [model.update(input, radius, lr)]
+            model.update(input, radius, lr)
 
         frames += [np.copy(model.nodes).reshape(height, width, 3)]
+
+        learn_radius += [radius]
+        learn_lr += [lr]
 
         # Обновить радиус и скорость обучения в конце эпохи.
         radius = start_radius * np.exp(-i / (num_epochs / np.log(start_radius)))
@@ -91,14 +95,18 @@ def main():
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
-    axes[0, 0].set_title('Функция потерь')
+    axes[0, 0].set_title('Радиус')
     axes[0, 0].set_xlabel('Эпоха')
-    # axes[0, 0].set_ylabel('MSE')
-    axes[0, 0].set_yscale('log')
-    axes[0, 0].plot(bmu_error)
+    axes[0, 0].plot(learn_radius)
+
+    axes[0, 1].set_title('Скорость обучения')
+    axes[0, 1].set_xlabel('Эпоха')
+    axes[0, 1].plot(learn_lr)
 
     axes[1, 0].set_title('')
     im_axes = axes[1, 0].imshow(frames[0], animated=True)
+
+    axes[1, 1].axis('off')
 
     anim = animation.FuncAnimation(fig, update_fig, interval=100, blit=True)
     plt.show()
