@@ -43,8 +43,8 @@ class NARX(nn.Module):
         self.w2 = torch.nn.Parameter(torch.randn(hi_features, out_features))
         self.w3 = torch.nn.Parameter(torch.randn(out_features, hi_features))
 
-        self.b1 = torch.nn.Parameter(torch.ones(hi_features))
-        self.b2 = torch.nn.Parameter(torch.randn(out_features))
+        self.b1 = torch.nn.Parameter(torch.zeros(hi_features))
+        self.b2 = torch.nn.Parameter(torch.zeros(out_features))
 
     def clear(self):
         self.line1.clear()
@@ -72,16 +72,18 @@ def main():
     epochs = 100
 
     # Сгенерировать данные для обучения.
-    N, w = 600, 5
+    t = np.arange(0, 10, 0.01)
+    N, w = len(t), 5
 
-    t = np.linspace(0, 5, N)
     uk, yk = np.sin(t**2), [0]
 
-    for i in range(N-1):
+    for i in range(N - 1):
         yk += [yk[-1] / (1 + yk[-1]**2) + uk[i]]
 
-    train_data = [(np.array(uk[i:i+w], dtype=np.float32),
-                   np.array(yk[i:i+w], dtype=np.float32)) for i in range(N-5)]
+    uk = np.array(uk, dtype=np.float32)
+    yk = np.array(yk, dtype=np.float32)
+
+    train_data = [(uk[i:i+w], yk[i:i+w]) for i in range(N-5)]
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=1, shuffle=False)
 
     # Перевести модель в состояние обучения.
@@ -124,27 +126,35 @@ def main():
     model.eval()
     model.clear()
 
-    predict = []
+    predict = model(train_data[0][0]).detach().tolist()
+
     for x, _ in train_data:
         predict += [model(x).detach().numpy().item(-1)]
+
+    predict = np.array(predict, dtype=np.float32)
 
     # Вывести краткую статистику обучения.
     print('Время обучения:', int(time_end - time_start), 'с.',
           'Количество эпох:', epochs,
     )
 
-    fig, axes = plt.subplots(1, 2)
+    fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
-    axes[0].set_title('Функция потерь')
-    axes[0].set_xlabel('Эпоха')
-    axes[0].set_ylabel('MSE')
-    axes[0].plot(train_loss)
+    axes[0, 0].set_title('Функция потерь')
+    axes[0, 0].set_xlabel('Эпоха')
+    axes[0, 0].set_ylabel('MSE')
+    axes[0, 0].plot(train_loss)
 
-    axes[1].set_title('Функция потерь')
-    axes[1].plot(uk)
-    axes[1].plot(yk)
-    axes[1].plot(predict, '-')
+    axes[0, 1].set_title('Результат')
+    axes[0, 1].plot(uk)
+    axes[0, 1].plot(yk)
+    axes[0, 1].plot(predict)
+
+    axes[1, 0].set_title('Ошибка')
+    axes[1, 0].plot(predict - yk)
+
+    axes[1, 1].axis('off')
 
     plt.show()
 
