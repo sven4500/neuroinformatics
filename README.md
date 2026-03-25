@@ -1,5 +1,3 @@
-**Language:** English | [Русский](README.ru.md)
-
 # Neuroinformatics
 
 This repository contains laboratory assignments for the "Neuroinformatics" course. The first four assignments are implemented in Python 3.9.11 using the Keras (TensorFlow) 2.9.1 library. Subsequent assignments are implemented in PyTorch.
