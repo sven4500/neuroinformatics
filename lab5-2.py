@@ -32,11 +32,11 @@ class HopfieldLayer(nn.Module):
 
 def load_image(path, width=320, height=240):
     image = Image.open(path)
-    image = image.convert('RGB')  # удалить альфа канал, иногда он может присутствовать!
+    image = image.convert('RGB')  # remove alpha channel, it may sometimes be present!
     image = image.resize((width, height), Image.ANTIALIAS)
     image = np.asarray(image, dtype=np.float32)
-    image = np.dot(image[..., :3], [0.2989, 0.5870, 0.1140]).astype(np.float32)  # получить float32 вместо double
-    image = (image - 127.5) / 127.5  # нормализовать [-1..1]
+    image = np.dot(image[..., :3], [0.2989, 0.5870, 0.1140]).astype(np.float32)  # get float32 instead of double
+    image = (image - 127.5) / 127.5  # normalize to [-1..1]
     # np.reshape(image, width * height)
     return image.flatten()
 
@@ -65,39 +65,39 @@ update_fig.counter = 0
 
 
 def main():
-    # Вывести номер версии PyTorch.
+    # Print the PyTorch version number.
     print('PyTorch version:', torch.__version__)
 
-    # Гиперпараметры.
+    # Hyperparameters.
     epochs = 1500
     width, height = 10, 12
 
-    # Задать новое зерно.
+    # Set a new random seed.
     seed = time.time()
     random.seed(seed)
     torch.manual_seed(seed)
 
-    # Создать слой Хопфилда. Слой один поэтому Sequential не нужен.
+    # Create the Hopfield layer. There is only one layer so Sequential is not needed.
     model = HopfieldLayer(in_features=width*height)
 
-    # Задать оптимизатор.
+    # Set the optimizer.
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     # optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
     train_data = load_train_data(width, height)
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=1, shuffle=True)
 
-    # Перевести модель в состояние обучения.
+    # Set the model to training mode.
     model.train()
 
     #
     train_loss = []
 
-    # Обучить модель.
+    # Train the model.
     time_start = timer()
 
     for i in range(epochs):
-        # Создать объект tqdm для вывода дополнительного текста.
+        # Create a tqdm object to display additional text.
         pbar = tqdm(enumerate(train_loader))
 
         for j, (input, output_gt) in pbar:
@@ -110,7 +110,7 @@ def main():
             loss = crit(output_gt, output)
             train_loss += [loss.item()]
 
-            # Обновить веса.
+            # Update weights.
             optimizer.zero_grad()
             loss.backward()  # retain_graph=True
             optimizer.step()
@@ -119,12 +119,12 @@ def main():
 
     time_end = timer()
 
-    # Перевести модель в рабочее состояние
+    # Set the model to evaluation mode.
     model.eval()
 
     global im_axes, frames
 
-    # Задать ожидаемое и зашумлённое входные значения.
+    # Set the expected and noisy input values.
     output_gt = train_data[0][0]
     initial = np.copy(output_gt)
     # initial += np.random.normal(0, 0.15, initial.shape)
@@ -142,29 +142,29 @@ def main():
     output_gt = np.reshape(output_gt, (height, width))
     initial = np.reshape(initial, (height, width))
 
-    # Вывести краткую статистику обучения.
-    print('Время обучения:', int(time_end - time_start), 'с.',
-          'Количество эпох:', epochs,
+    # Print brief training statistics.
+    print('Training time:', int(time_end - time_start), 's.',
+          'Epochs:', epochs,
     )
 
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
-    axes[0, 0].set_title('Функция потерь')
-    axes[0, 0].set_xlabel('Эпоха')
+    axes[0, 0].set_title('Loss function')
+    axes[0, 0].set_xlabel('Epoch')
     axes[0, 0].set_ylabel('MSE')
     axes[0, 0].plot(train_loss)
 
-    axes[0, 1].set_title('Ожидаемое значение')
+    axes[0, 1].set_title('Expected value')
     axes[0, 1].set_aspect(1)
     axes[0, 1].imshow(output_gt)
 
-    axes[1, 0].set_title('Первоначальное значение')
+    axes[1, 0].set_title('Initial value')
     axes[1, 0].set_aspect(1)
     axes[1, 0].imshow(initial)
 
     # https://matplotlib.org/2.1.0/gallery/animation/dynamic_image.html
-    axes[1, 1].set_title('Текущее значение')
+    axes[1, 1].set_title('Current value')
     axes[1, 1].set_aspect(1)
     im_axes = axes[1, 1].imshow(frames[0], animated=True)
 

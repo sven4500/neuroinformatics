@@ -18,77 +18,77 @@ def true_signal(t):
 
 
 def main():
-    # Вывести номер версии Keras API.
+    # Print the Keras API version number.
     print("Keras version:", keras.__version__)
 
-    # Описать модель. Моделируем модель ADALINE (adaptive linear neuron). По сути модель представляет персептрон за
-    # исключением функции активации: здесь она линейная.
+    # Define the model. We model an ADALINE (adaptive linear neuron). Essentially it is a perceptron
+    # except for the activation function: here it is linear.
     model = keras.models.Sequential()
     model.add(keras.layers.Dense(1, input_dim=D, activation='linear',
                                  kernel_initializer=keras.initializers.RandomNormal(stddev=0.5,mean=0.0),
                                  bias_initializer=keras.initializers.RandomNormal(stddev=0.5,mean=0.0)))
 
-    # Вывести в консоль информацию о модели.
+    # Print model information to the console.
     model.summary()
 
-    # Скомпилировать модель.
-    # todo: важно отметить связь с SGD
+    # Compile the model.
+    # todo: note the connection with SGD
     optimizer = keras.optimizers.SGD(learning_rate=0.01)
     model.compile(loss='mse', optimizer=optimizer, metrics=['mae'])
 
-    # Сгенерировать функции зашумлённого сигнала и истинного.
+    # Generate the noisy and true signal functions.
     t = np.arange(0, 2.5, 0.01)
     yn = noised_signal(t).tolist()
     yt = true_signal(t).tolist()
 
-    # Сгенерировать данные для обучения. Входными данными являются последовательности из D дискрет зашумлённого сигнала,
-    # а выходными данными соответствующая дискрета истинного сигнала.
+    # Generate training data. The inputs are sequences of D samples of the noisy signal,
+    # and the outputs are the corresponding samples of the true signal.
     sequence = [yn[i:i + D] for i in range(0, len(yn) - D)]
     predict_gt = [yt[i] for i in range(D, len(yt))]
 
-    # Проверить соответствие размеров. Каждому окну должно соответствовать выходное значение.
+    # Verify size consistency. Each window must correspond to one output value.
     assert len(sequence) == len(predict_gt)
 
-    # Обучить модель.
+    # Train the model.
     time_start = timer()
     hist = model.fit(sequence, predict_gt, batch_size=1, epochs=epochs, shuffle=True)
     time_end = timer()
 
-    # Предсказать истинный сигнал.
-    predict = model.predict(sequence).flatten().tolist()  # predict возвращает список списков поэтому делаем flatten
+    # Predict the true signal.
+    predict = model.predict(sequence).flatten().tolist()  # predict returns a list of lists, so we flatten it
 
-    # Посчитать ошибки предсказания.
+    # Calculate prediction errors.
     yp = yt[:D] + predict
     errors = [i - j for i, j in zip(predict, predict_gt)]
 
-    # Вывести краткую статистику обучения.
-    print('Время обучения:', int(time_end - time_start), 'с.',
-          'Количество эпох:', epochs,
-          'Функция потерь MSE:', min(hist.history['loss']),
-          'Метрика качества MAE:', min(hist.history['mae']))
+    # Print brief training statistics.
+    print('Training time:', int(time_end - time_start), 's.',
+          'Epochs:', epochs,
+          'Loss MSE:', min(hist.history['loss']),
+          'Metric MAE:', min(hist.history['mae']))
 
-    # Вывести графики на экран
+    # Display plots
     fig, axes = plt.subplots(2, 2)
-    fig.tight_layout()  # избавиться от перекрывающихся текстов на графиках
+    fig.tight_layout()  # avoid overlapping text on plots
     # plt.subplots_adjust(top=0.9, bottom=0.1)
 
-    axes[0, 0].set_title('Функция потерь')
-    axes[0, 0].set_xlabel('Эпоха')
+    axes[0, 0].set_title('Loss function')
+    axes[0, 0].set_xlabel('Epoch')
     axes[0, 0].set_ylabel('MSE')
     axes[0, 0].plot(hist.history['loss'])
 
-    axes[0, 1].set_title('Метрика качества')
-    axes[0, 1].set_xlabel('Эпоха')
+    axes[0, 1].set_title('Quality metric')
+    axes[0, 1].set_xlabel('Epoch')
     axes[0, 1].set_ylabel('MAE')
     axes[0, 1].plot(hist.history['mae'])
 
     axes[1, 0].set_xlabel('t')
     axes[1, 0].set_ylabel('y')
-    axes[1, 0].plot(t, yn)  # зашумлённый сигнал
-    axes[1, 0].plot(t, yt)  # истинный сигнал
-    axes[1, 0].plot(t, yp)  # предсказание (фильтрация) ADALINE (должен совпадать с истинным)
+    axes[1, 0].plot(t, yn)  # noisy signal
+    axes[1, 0].plot(t, yt)  # true signal
+    axes[1, 0].plot(t, yp)  # ADALINE prediction (filtering) — should match the true signal
 
-    axes[1, 1].set_title('Ошибка фильтрации')
+    axes[1, 1].set_title('Filtering error')
     axes[1, 1].set_xlabel('t')
     axes[1, 1].set_ylabel('y')
     axes[1, 1].plot(errors)
