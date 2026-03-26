@@ -55,49 +55,49 @@ def get_train_data(signal, labels, window=1):
 
 
 def main():
-    # Вывести номер версии PyTorch.
+    # Print the PyTorch version number.
     print('PyTorch version:', torch.__version__)
 
-    # Гиперпараметры.
+    # Hyperparameters.
     epochs = 100
     window = 10
 
-    # Задать новое зерно.
+    # Set a new random seed.
     seed = time.time()
     random.seed(seed)
     torch.manual_seed(seed)
 
-    # Создать слои.
+    # Create layers.
     elman = ElmanLayer(in_features=window, out_features=8)
     linear = nn.Linear(in_features=8, out_features=window)
 
-    # Объединить слои в сеть.
+    # Combine layers into a network.
     model = nn.Sequential(
         elman,
         linear
     )
 
-    # Задать оптимизатор.
+    # Set the optimizer.
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
-    # Сгенерировать данные для обучения.
+    # Generate training data.
     signal, labels = make_signal(r1=1, r2=3, r3=2)
     train_dataset = get_train_data(signal, labels, window=window)
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=1, shuffle=False)
 
-    # Перевести модель в состояние обучения.
+    # Set the model to training mode.
     model.train()
 
     train_loss = []
 
-    # Обучить модель.
+    # Train the model.
     time_start = timer()
 
     for i in range(epochs):
-        # создать объект tqdm, чтобы вывести собственный текст
+        # create tqdm object to display custom text
         pbar = tqdm(enumerate(train_loader))
 
-        # Очистить память модели
+        # Clear model memory
         elman.clear_memory()
         last_loss = []
 
@@ -120,13 +120,13 @@ def main():
 
     time_end = timer()
 
-    # Перевести модель в рабочее состояние.
+    # Set the model to evaluation mode.
     model.eval()
 
-    # Сбросить память слоя Элмана.
+    # Reset the Elman layer memory.
     elman.clear_memory()
 
-    # Обработать сигнал на обученной модели.
+    # Process the signal through the trained model.
     predict = []
     for x, y in train_dataset:
         predict += [model(torch.tensor(x)).detach().numpy().item(0)]
@@ -135,25 +135,25 @@ def main():
     predict[predict > 0] = 1
     predict[predict < 0] = -1
 
-    # Вывести краткую статистику обучения.
-    print('Время обучения:', int(time_end - time_start), 'с.',
-          'Количество эпох:', epochs,
+    # Print brief training statistics.
+    print('Training time:', int(time_end - time_start), 's.',
+          'Epochs:', epochs,
     )
 
-    # Вывести графики на экран.
+    # Display plots.
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
-    axes[0, 0].set_title('Функция потерь')
-    axes[0, 0].set_xlabel('Эпоха')
+    axes[0, 0].set_title('Loss function')
+    axes[0, 0].set_xlabel('Epoch')
     axes[0, 0].set_ylabel('MSE')
     axes[0, 0].plot(train_loss)
 
-    axes[1, 0].set_title('Маркировка сигнала')
+    axes[1, 0].set_title('Signal labelling')
     axes[1, 0].plot(signal)
     axes[1, 0].plot(labels)
 
-    axes[1, 1].set_title('Распознавание сигнала')
+    axes[1, 1].set_title('Signal recognition')
     axes[1, 1].plot(signal)
     axes[1, 1].plot(predict)
 

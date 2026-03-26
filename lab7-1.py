@@ -38,9 +38,9 @@ def load_train_data(path, requested_label):
 
 
 def plain_to_image(image, width=32, height=32):
-    image = (image + 1) / 2  # нормировать в диапазон [0..1]
-    image = np.reshape(image, (3, height, width))  # придать форму
-    image = np.transpose(image, [1, 2, 0])  # переместить размерности на свои места
+    image = (image + 1) / 2  # normalize to range [0..1]
+    image = np.reshape(image, (3, height, width))  # reshape
+    image = np.transpose(image, [1, 2, 0])  # move dimensions to their correct positions
     return image
 
 
@@ -66,8 +66,8 @@ def on_button_click(axes_gt, axes_out, axes_mod, encoder, decoder, data):
 
 def main():
     epochs = 50
-    width, height = 32, 32  # соответствует размеру изображений CIFAR-10
-    dim_1 = width * height * 3  # 3 цветовых компоненты
+    width, height = 32, 32  # matches CIFAR-10 image size
+    dim_1 = width * height * 3  # 3 colour components
     dim_2, dim_3 = int(dim_1 * 1.5), int(dim_1 / 32.0)
 
     encoder = nn.Sequential(
@@ -84,12 +84,12 @@ def main():
         nn.Tanh(),
     )
 
-    # Задать оптимизатор.
+    # Set the optimizer.
     optimizer_enc = optim.Adam(encoder.parameters(), lr=1e-5)
     optimizer_dec = optim.Adam(decoder.parameters(), lr=1e-5)
 
-    # Классы имеют следующие идентификаторы: 0 - самолёты, 1 - машины, 2 - птицы, 3 - кошки, 4 - олени, 5 - собаки,
-    # 6 - лягушки, 7 - лошади, 8 - корабли, 9 - грузовики
+    # Classes have the following identifiers: 0 - planes, 1 - cars, 2 - birds, 3 - cats, 4 - deer, 5 - dogs,
+    # 6 - frogs, 7 - horses, 8 - ships, 9 - trucks
     train_data = []
     train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=0)
     # train_data += load_train_data(path='cifar-10-batches-py/data_batch_1', requested_label=2)
@@ -98,19 +98,19 @@ def main():
 
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=32, shuffle=True)
 
-    # Вывести краткую статистику по модели и данным для обучения.
+    # Print brief statistics about the model and training data.
     print('dim_1: %d, dim_2: %d, dim_3: %d, samples: %d' % (dim_1, dim_2, dim_3, len(train_data)))
 
-    # Перевести модель в состояние обучения.
+    # Set the model to training mode.
     encoder.train()
     decoder.train()
 
     train_loss = []
     time_start = timer()
 
-    # Обучить модель.
+    # Train the model.
     for i in range(epochs):
-        # Создать объект tqdm, чтобы вывести собственный текст.
+        # Create a tqdm object to display custom text.
         pbar = tqdm(enumerate(train_loader))
 
         for j, (input, output_gt) in pbar:
@@ -118,12 +118,12 @@ def main():
             output_enc = encoder(input)
             output_dec = decoder(output_enc)
 
-            # Посчитать ошибку.
+            # Calculate the loss.
             crit = nn.MSELoss()
             loss = torch.sqrt(crit(output_gt, output_dec))
             train_loss += [loss.item()]
 
-            # Обновить весовые коэффициенты.
+            # Update the weights.
             optimizer_enc.zero_grad()
             optimizer_dec.zero_grad()
 
@@ -132,43 +132,43 @@ def main():
             optimizer_enc.step()
             optimizer_dec.step()
 
-            # Показать ошибку.
+            # Display the loss.
             pbar.set_description('%d. loss: %f' % (i + 1, train_loss[-1]))
 
     time_end = timer()
 
-    # Вывести краткую статистику обучения.
-    print('Время обучения:', int(time_end - time_start), 'с.',
-          'Количество эпох:', epochs,
+    # Print brief training statistics.
+    print('Training time:', int(time_end - time_start), 's.',
+          'Epochs:', epochs,
     )
 
-    # Перевести модель в рабочее состояние.
+    # Set the model to evaluation mode.
     encoder.eval()
     decoder.eval()
 
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
-    axes[0, 0].set_title('Функция потерь')
-    axes[0, 0].set_xlabel('Эпоха')
+    axes[0, 0].set_title('Loss function')
+    axes[0, 0].set_xlabel('Epoch')
     axes[0, 0].set_ylabel('MSE')
     axes[0, 0].plot(train_loss)
 
-    axes[0, 1].set_title('Вход')
+    axes[0, 1].set_title('Input')
     axes[0, 1].set_aspect(1)
     ax_gt = axes[0, 1].imshow([[0]])
 
-    axes[1, 0].set_title('Мод. выход')
+    axes[1, 0].set_title('Mod. output')
     axes[1, 0].set_aspect(1)
     ax_mod = axes[1, 0].imshow([[0]])
 
-    axes[1, 1].set_title('Выход')
+    axes[1, 1].set_title('Output')
     axes[1, 1].set_aspect(1)
     ax_out = axes[1, 1].imshow([[0]])
 
     features = np.random.randint(low=0, high=dim_3, size=3)
 
-    # Добавить три полосы прокрутки для модификации трёх случайных компонент ядра.
+    # Add three sliders for modifying three random components of the latent code.
     axs_1 = fig.add_axes([0.85, 0.25, 0.0225, 0.65])
     slid_1 = Slider(ax=axs_1, label='#1', valinit=0, valmin=-1.0, valmax=1.0, orientation='vertical')
     slid_1.on_changed(lambda val : on_slider_update(ax_mod, decoder, features[0], val))
@@ -182,11 +182,11 @@ def main():
     slid_3.on_changed(lambda val : on_slider_update(ax_mod, decoder, features[2], val))
 
     axs_4 = fig.add_axes([0.8625, 0.1, 0.1, 0.075])
-    btn = Button(axs_4, 'Случ.')
+    btn = Button(axs_4, 'Rand.')
     btn.on_clicked(lambda event : on_button_click(ax_gt, ax_out, ax_mod, encoder, decoder, train_data))
     on_button_click(ax_gt, ax_out, ax_mod, encoder, decoder, train_data)
 
-    plt.subplots_adjust(right=0.8)  # освободить немного места на графике под элементы управления
+    plt.subplots_adjust(right=0.8)  # free up some space on the plot for the UI controls
     plt.show()
 
 

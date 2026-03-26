@@ -5,25 +5,25 @@ from matplotlib import pyplot as plt
 from timeit import default_timer as timer
 
 
-# Гиперпараметры.
+# Hyperparameters.
 epochs = 1000
 
 
-# Уравнение эллипса в параметрическом виде.
+# Ellipse equation in parametric form.
 def ellipse(t, a, b, x0, y0):
     x = x0 + a * np.cos(t)
     y = y0 + b * np.sin(t)
     return x, y
 
 
-# Уравнение параболы в параметрическом виде.
+# Parabola equation in parametric form.
 def parabola(t, p, x0, y0):
     x = x0 + t ** 2 / (2. * p)
     y = y0 + t
     return x, y
 
 
-# Повернуть фигуру на заданный угол.
+# Rotate the figure by the given angle.
 def rotate(x, y, alpha):
     xr = x * np.cos(alpha) - y * np.sin(alpha)
     yr = x * np.sin(alpha) + y * np.cos(alpha)
@@ -31,39 +31,39 @@ def rotate(x, y, alpha):
 
 
 def main():
-    # Вывести номер версии TensorFlow.
+    # Print the TensorFlow version number.
     print("TensorFlow version:", tf.__version__)
 
-    # Подготовить данные для обучения.
-    # Задать параметр t.
+    # Prepare training data.
+    # Set the parameter t.
     t = np.linspace(0, 2 * np.pi, 200)
 
-    # Сгенерировать точки для первой фигуры.
+    # Generate points for the first figure.
     x1, y1 = ellipse(t, 0.4, 0.15, 0, 0)
     x1, y1 = rotate(x1, y1, np.pi / 6.)
 
-    # Сгенерировать точки для второй фигуры.
+    # Generate points for the second figure.
     x2, y2 = ellipse(t, 0.7, 0.5, 0, 0)
     x2, y2 = rotate(x2, y2, np.pi / 3.)
 
-    # Сгенерировать точки для третьей фигуры.
+    # Generate points for the third figure.
     # x3, y3 = parabola(t, 1., 0., -0.8)
     x3, y3 = ellipse(t, 1., 1., 0., 0.)
     x3, y3 = rotate(x3, y3, np.pi / 2.)
 
-    # Объединить все точки и преобразовать данные в удобный для TF формат. Стоит отметить что каждая строка таблицы
-    # имеет формат входная точка [x, y] и идентификатор класса [a, b, c]. a = 1 означает принадлежность первому классу,
-    # b = 1 второму и т.д. У нас строгая принадлежность классу поэтому только один класс ненулевой. Однако это не мешает
-    # сети выдавать промежуточные состояния.
+    # Combine all points and convert data to a TF-friendly format. Note that each row of the table
+    # has the format: input point [x, y] and class identifier [a, b, c]. a=1 means membership in
+    # class 1, b=1 in class 2, etc. We have strict class membership so only one class is non-zero,
+    # but this does not prevent the network from outputting intermediate states.
     d1 = [[[x, y], [1., 0., 0.]] for x, y in zip(x1, y1)]
     d2 = [[[x, y], [0., 1., 0.]] for x, y in zip(x2, y2)]
     d3 = [[[x, y], [0., 0., 1.]] for x, y in zip(x3, y3)]
 
-    # Объединить и перемешать данные случайным образом.
+    # Combine and shuffle data randomly.
     dataset = d1 + d2 + d3
     np.random.shuffle(dataset)
 
-    # Разбить набор на обучающую и тестовую выборки. Разбиваем в соотношении 80%.
+    # Split the dataset into training and test sets. Split ratio is 80%.
     mid = int(len(dataset) * 0.8)
     train_data = dataset[:mid]
     test_data = dataset[mid:]
@@ -71,21 +71,21 @@ def main():
     train_input = [x[0] for x in train_data]
     train_output = [x[1] for x in train_data]
 
-    # Описать модель. На вход подаём двухмерную точку поэтому input_dim равен 2.
+    # Define the model. We feed a two-dimensional point as input, so input_dim equals 2.
     model = keras.models.Sequential()
     model.add(keras.layers.Dense(40, input_dim=2, activation='tanh'))
     model.add(keras.layers.Dense(12, activation='tanh'))
     model.add(keras.layers.Dense(3, activation='sigmoid'))
 
-    # Вывести в консоль информацию о модели.
+    # Print model information to the console.
     model.summary()
 
-    # Скомпилировать модель.
+    # Compile the model.
     model.compile(loss='mse', optimizer='adam', metrics=['mae'])
 
     batch_size = int(len(train_data) * 0.1)
 
-    # Обучить модель.
+    # Train the model.
     time_start = timer()
     hist = model.fit(train_input, train_output, batch_size=batch_size, epochs=epochs)
     time_end = timer()
@@ -97,22 +97,22 @@ def main():
     z = model.predict(xy)
     z = z.reshape((200, 200, 3))
 
-    # Вывести краткую статистику обучения.
-    print('Время обучения:', int(time_end - time_start), 'с.',
-          'Количество эпох:', epochs,
-          'Функция потерь MSE:', min(hist.history['loss']),
-          'Метрика качества MAE:', min(hist.history['mae']))
+    # Print brief training statistics.
+    print('Training time:', int(time_end - time_start), 's.',
+          'Epochs:', epochs,
+          'Loss MSE:', min(hist.history['loss']),
+          'Metric MAE:', min(hist.history['mae']))
 
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
-    axes[0, 0].set_title('Функция потерь')
-    axes[0, 0].set_xlabel('Эпоха')
+    axes[0, 0].set_title('Loss function')
+    axes[0, 0].set_xlabel('Epoch')
     axes[0, 0].set_ylabel('MSE')
     axes[0, 0].plot(hist.history['loss'])
 
-    axes[0, 1].set_title('Метрика качества')
-    axes[0, 1].set_xlabel('Эпоха')
+    axes[0, 1].set_title('Quality metric')
+    axes[0, 1].set_xlabel('Epoch')
     axes[0, 1].set_ylabel('MAE')
     axes[0, 1].plot(hist.history['mae'])
 
@@ -121,7 +121,7 @@ def main():
     axes[1, 0].plot(x3, y3)
     axes[1, 0].set_aspect(1)
 
-    axes[1, 1].set_title('Скалярное поле')
+    axes[1, 1].set_title('Scalar field')
     axes[1, 1].set_xlabel('x')
     axes[1, 1].set_ylabel('y')
     axes[1, 1].get_xaxis().set_ticks([])

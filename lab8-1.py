@@ -22,10 +22,10 @@ class TDL(nn.Module):
             self.line.append(torch.zeros(self.in_features))
 
     def push(self, inputs):
-        self.line.appendleft(inputs)  # добавить элемент слева
+        self.line.appendleft(inputs)  # add element to the left
 
     def forward(self, inputs=0):
-        return self.line.pop()  # вернуть и удалить элемент справа
+        return self.line.pop()  # return and remove element from the right
 
 
 class NARX(nn.Module):
@@ -54,24 +54,24 @@ class NARX(nn.Module):
         out1 = torch.tanh(self.line1() @ self.w1 + self.line2() @ self.w3 + self.b1)  # tanh
         out2 = out1 @ self.w2 + self.b2  # linear
 
-        self.line1.push(torch.tensor(inputs))  # сохранить копию входа в TDL1
-        self.line2.push(torch.tensor(out2))  # сохранить выход в TDL2
+        self.line1.push(torch.tensor(inputs))  # save a copy of the input in TDL1
+        self.line2.push(torch.tensor(out2))  # save the output in TDL2
 
         return out2
 
 
 def main():
-    # Вывести номер версии PyTorch.
+    # Print the PyTorch version number.
     print('PyTorch version:', torch.__version__)
 
     model = NARX(5, 10, 5, 3, 3)
 
-    # Задать оптимизатор.
+    # Set the optimizer.
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     epochs = 100
 
-    # Сгенерировать данные для обучения.
+    # Generate training data.
     t = np.arange(0, 10, 0.01)
     N, w = len(t), 5
 
@@ -86,19 +86,19 @@ def main():
     train_data = [(uk[i:i+w], yk[i:i+w]) for i in range(N-5)]
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=1, shuffle=False)
 
-    # Перевести модель в состояние обучения.
+    # Set the model to training mode.
     model.train()
 
     train_loss = []
 
-    # Обучить модель.
+    # Train the model.
     time_start = timer()
 
     for i in range(epochs):
-        # создать объект tqdm, чтобы вывести собственный текст
+        # create tqdm object to display custom text
         pbar = tqdm(enumerate(train_loader))
 
-        # Сбросить состояние линий задержек.
+        # Reset the delay line state.
         model.clear()
 
         epoch_loss = []
@@ -106,23 +106,23 @@ def main():
         for _, (inputs, outputs_gt) in pbar:
             outputs = model(inputs)
 
-            # Посчитать ошибку.
+            # Calculate the loss.
             crit = nn.MSELoss()
             loss = torch.sqrt(crit(outputs_gt, outputs))
             epoch_loss += [loss.item()]
 
-            # Обновить веса.
+            # Update weights.
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-        # Вывести ошибку на последней эпохе.
+        # Print loss for the last epoch.
         train_loss += [np.mean(epoch_loss)]
         pbar.write(' %d. loss: %f' % (i + 1, train_loss[-1]))
 
     time_end = timer()
 
-    # Перевести модель в рабочее состояние
+    # Set the model to evaluation mode.
     model.eval()
     model.clear()
 
@@ -133,25 +133,25 @@ def main():
 
     predict = np.array(predict, dtype=np.float32)
 
-    # Вывести краткую статистику обучения.
-    print('Время обучения:', int(time_end - time_start), 'с.',
-          'Количество эпох:', epochs,
+    # Print brief training statistics.
+    print('Training time:', int(time_end - time_start), 's.',
+          'Epochs:', epochs,
     )
 
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
-    axes[0, 0].set_title('Функция потерь')
-    axes[0, 0].set_xlabel('Эпоха')
+    axes[0, 0].set_title('Loss function')
+    axes[0, 0].set_xlabel('Epoch')
     axes[0, 0].set_ylabel('MSE')
     axes[0, 0].plot(train_loss)
 
-    axes[0, 1].set_title('Результат')
+    axes[0, 1].set_title('Result')
     axes[0, 1].plot(uk)
     axes[0, 1].plot(yk)
     axes[0, 1].plot(predict)
 
-    axes[1, 0].set_title('Ошибка')
+    axes[1, 0].set_title('Error')
     axes[1, 0].plot(predict - yk)
 
     axes[1, 1].axis('off')

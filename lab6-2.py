@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 
-# SOM (self organised map) - карта Кохонена
+# SOM (self organised map) - Kohonen map
 class SOM():
     def __init__(self, in_features, width, height):
         self.nodes = np.random.randn(width*height, in_features)
@@ -12,14 +12,14 @@ class SOM():
         return
 
     def update(self, input, radius, lr):
-        # Найти BMU (best matching unit) для input. Т.е. индекс узла
+        # Find the BMU (best matching unit) for the input, i.e. the node index
         dist = np.linalg.norm(self.nodes - input, axis=1)
         i_min = np.argmin(dist)
 
-        # Найти расстояние от BMU до остальных узлов.
+        # Find the distance from the BMU to all other nodes.
         dist = np.linalg.norm(self.indices - self.indices[i_min], axis=1)
 
-        # Обновить только те узлы которые находятся в пределах воздействия.
+        # Update only the nodes that are within the influence radius.
         for d, node in zip(dist, self.nodes):
             if d < radius:
                 influence = np.exp(-d / (2 * radius))
@@ -61,14 +61,14 @@ def main():
     for i in range(1, num_epochs):
         np.random.shuffle(train_data)
 
-        # Создать объект tqdm для вывода дополнительного текста.
+        # Create a tqdm object to display additional text.
         pbar = tqdm(enumerate(train_data))
 
         for j, input in pbar:
-            # Обновить карту.
+            # Update the map.
             model.update(input, radius, lr)
 
-        # Обновить радиус и скорость обучения в конце эпохи.
+        # Update radius and learning rate at the end of the epoch.
         radius = start_radius * np.exp(-i / (num_epochs / np.log(start_radius)))
         lr = start_lr * np.exp(-i / num_epochs)
 
@@ -79,8 +79,8 @@ def main():
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
-    # axes[0, 0].set_title('Функция потерь')
-    # axes[0, 0].set_xlabel('Эпоха')
+    # axes[0, 0].set_title('Loss function')
+    # axes[0, 0].set_xlabel('Epoch')
     # axes[0, 0].set_ylabel('MSE')
 
     # axes[1, 0].set_title('')
