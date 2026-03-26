@@ -58,21 +58,21 @@ def make_signal(r1=1, r2=1, r3=1):
 
 
 def main():
-    # Вывести номер версии PyTorch.
+    # Print the PyTorch version number.
     print('Keras version:', keras.__version__)
 
-    # Гиперпараметры.
+    # Hyperparameters.
     epochs = 50
     window = 10
 
-    # Задать новое зерно.
+    # Set a new random seed.
     seed = time.time()
     random.seed(seed)
 
-    # Создать слой Элмана.
+    # Create the Elman layer.
     elman = ElmanLayer(output_dim=8)
 
-    # Создать модель.
+    # Create the model.
     model = keras.models.Sequential()
     model.add(elman)
     model.add(keras.layers.Dense(window,
@@ -80,13 +80,13 @@ def main():
                                  kernel_initializer='random_normal',
                                  bias_initializer='zeros'))
 
-    # Скомпилировать модель.
+    # Compile the model.
     model.compile(loss='mse', optimizer='adam', metrics=['mae'])
 
-    # Вывести в консоль информацию о модели.
+    # Print model information to the console.
     # model.summary()
 
-    # Сгенерировать данные для обучения.
+    # Generate training data.
     signal, labels = make_signal(r1=1, r2=3, r3=2)
 
     signal_seq = [np.array(signal[i:i + window], dtype=np.float32).tolist() for i in range(0, len(signal) - window)]
@@ -94,7 +94,7 @@ def main():
 
     train_loss, train_mae = [], []
 
-    # Обучить модель. На каждой итерации сбрасываем память Элмана.
+    # Train the model. Reset Elman memory at each iteration.
     time_start = timer()
 
     for _ in range(epochs):
@@ -105,17 +105,17 @@ def main():
 
     time_end = timer()
 
-    # Вывести краткую статистику обучения.
-    print('Время обучения:', int(time_end - time_start), 'с.',
-          'Количество эпох:', epochs,
-          'Функция потерь MSE:', min(train_loss),
-          'Метрика качества MAE:', min(train_mae),
+    # Print brief training statistics.
+    print('Training time:', int(time_end - time_start), 's.',
+          'Epochs:', epochs,
+          'Loss MSE:', min(train_loss),
+          'Metric MAE:', min(train_mae),
     )
 
-    # Сбросить память слоя Элмана.
+    # Reset the Elman layer memory.
     elman.clear()
 
-    # Обработать сигнал на обученной модели.
+    # Process the signal through the trained model.
     predict = []
     for seq in signal_seq:
         predict += [model.predict([seq])[0][0]]
@@ -124,25 +124,25 @@ def main():
     predict[predict > 0] = 1
     predict[predict < 0] = -1
 
-    # Вывести графики на экран.
+    # Display plots.
     fig, axes = plt.subplots(2, 2)
     fig.tight_layout()
 
-    axes[0, 0].set_title('Функция потерь')
-    axes[0, 0].set_xlabel('Эпоха')
+    axes[0, 0].set_title('Loss function')
+    axes[0, 0].set_xlabel('Epoch')
     axes[0, 0].set_ylabel('MSE')
     axes[0, 0].plot(train_loss)
 
-    axes[0, 1].set_title('Метрика качества')
-    axes[0, 1].set_xlabel('Эпоха')
+    axes[0, 1].set_title('Quality metric')
+    axes[0, 1].set_xlabel('Epoch')
     axes[0, 1].set_ylabel('MAE')
     axes[0, 1].plot(train_mae)
 
-    axes[1, 0].set_title('Маркировка сигнала')
+    axes[1, 0].set_title('Signal labelling')
     axes[1, 0].plot(signal)
     axes[1, 0].plot(labels)
 
-    axes[1, 1].set_title('Распознавание сигнала')
+    axes[1, 1].set_title('Signal recognition')
     axes[1, 1].plot(signal)
     axes[1, 1].plot(predict)
 
